@@ -64,3 +64,20 @@ NumPy, Pandas, GeoPandas/Shapely where needed · No ML in MVP · pytest + ruff +
 Not yet available — implementation begins in Phase 1. Expected entry points after Phase 1:
 `uvicorn app.main:app --reload` (backend) and `npm run dev` (frontend), plus
 `scripts/fetch_sample_data.py` for a pre-warmed offline demo cache.
+## Phase 1 status (backend skeleton)
+
+Run the API locally:
+
+```bash
+cd backend
+pip install -e ".[dev]"          # or: pip install fastapi "uvicorn[standard]" pydantic-settings numpy pandas pytest httpx ruff import-linter
+cp .env.example .env             # optional; sane defaults are built in
+uvicorn app.main:app --reload    # http://localhost:8000/api/v1/health · docs at /docs
+pytest -p no:libtmux             # run tests (see note below)
+lint-imports                     # engine purity contract (no network/LLM imports in engine/)
+ruff check .
+```
+
+`GET /api/v1/health` → `{"data": {"status":"ok","service":"fieldshift", ...}}` inside the
+standard success envelope (docs/03 §0.1). The `-p no:libtmux` flag only works around a
+pre-installed third-party pytest plugin in this sandbox; it is not needed on clean machines.
