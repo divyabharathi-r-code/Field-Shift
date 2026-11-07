@@ -1,6 +1,24 @@
+# --- Secrets: never commit real .env files (.env.example is the safe template) ---
 .env
 .env.local
 .env.*.local
+*.pem
+*.key
+
+# --- Project: downloaded raw datasets (large, reproducible from scripts; keep only .gitkeep) ---
+data_downloads/*
+!data_downloads/.gitkeep
+backend/data/cache/*
+!backend/data/cache/.gitkeep
+
+# --- Node / frontend build artifacts ---
+node_modules/
+frontend/dist/
+
+# --- Tool caches ---
+.import_linter_cache/
+.ruff_cache/
+
 __pycache__/
 *.py[cod]
 *$py.class
