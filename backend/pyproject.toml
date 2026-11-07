@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fieldshift-backend"
+version = "0.1.0"
+description = "FieldShift - transparent crop-rotation scenario exploration (NASA Space Apps 2026)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "numpy>=1.26",
+    "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",          # TestClient transport for FastAPI tests
+    "ruff>=0.5",
+    "import-linter>=2.0",   # enforces engine purity contract (see .importlinter)
+]
+# Deliberately NOT included in MVP (see docs/01 D3): scikit-learn, geopandas.
+# geopandas/shapely will be added in Phase 3 only where AOI geometry math needs it.
+
+[tool.setuptools.packages.find]
+include = ["app*", "engine*", "schemas*", "data*", "explain*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+# engine/ is held to strict typing once scoring code lands (Phase 5)
+warn_unused_ignores = true
+
+[tool.importlinter]
+root_packages = ["app", "engine", "schemas", "data", "explain"]
+include_external_packages = true
+
+# Purity contract from docs/01: the scientific layer must not depend on the
+# HTTP layer or the LLM sidecar. Violating this fails `lint-imports` (CI).
+[[tool.importlinter.contracts]]
+name = "Engine is pure: no app, no explain"
+type = "forbidden"
+source_modules = ["engine"]
+forbidden_modules = ["app", "explain"]
+
+[[tool.importlinter.contracts]]
+name = "Engine forbids network & LLM clients (static denylist)"
+type = "forbidden"
+source_modules = ["engine"]
+forbidden_modules = [
+    "httpx", "requests", "urllib3", "aiohttp", "socket",
+    "openai", "anthropic", "ollama", "boto3", "litellm",
+]
+# Note: import-linter forbids only top-level external packages (no subpackages).
+# `google.generativeai` is therefore not listable here; the runtime AST scan in
+# tests/unit/test_engine_purity.py covers dotted LLM imports explicitly.
