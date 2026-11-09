@@ -7,12 +7,31 @@ fixture providers and the engine never touches the network.
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 
 from app.config import Settings, get_settings
+from app.errors import FieldShiftError
+from data.agronomy_registry import AgronomyRegistry, load_agronomy_registry
+
+LOGGER = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
 def settings_dep() -> Settings:
     """Cached settings for use as a FastAPI dependency."""
     return get_settings()
+
+
+def agronomy_registry_dep() -> AgronomyRegistry:
+    """Load curated agronomy evidence and surface invalid data as a controlled API error."""
+    try:
+        return load_agronomy_registry()
+    except ValueError as exc:
+        LOGGER.exception("Curated agronomy registry is invalid")
+        raise FieldShiftError(
+            code="KNOWLEDGE_DATA_INVALID",
+            message="Curated agronomy evidence could not be loaded.",
+            status_code=500,
+            details={"reason": str(exc)},
+        ) from exc
