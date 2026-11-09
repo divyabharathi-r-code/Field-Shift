@@ -84,15 +84,24 @@ Metric           # value, provenance, warning[]        <- every number is wrappe
 - **Rule:** any `source_id` used anywhere in code must exist here. CI asserts this.
 - **Does NOT:** store actual data values.
 
+### `data/agronomy_registry.py`
+- **Does:** load and validate source-cited agronomy claims from `data/curated/agronomy_sources.csv`,
+  `crop_traits.csv`, and `crop_calendars.csv`; verify unique IDs, source references, locators,
+  source/claim verification consistency, controlled applicability fields, CSV structure, and
+  explicit unknown calendar windows.
+- **Does NOT:** fetch sources, merge into the NASA provider registry, infer farm-level conditions,
+  claim that `VERIFIED` means current/farm-valid, or create rotations and recommendations.
+
 ### `data/loader.py`
 - **Does:** cache-or-fetch orchestration, unit normalisation, DataFrame assembly, provenance attachment,
   coverage checks, deterministic ordering (sorted keys) so downstream hashing is stable.
 - **Does NOT:** score, rank, or choose scenarios.
 
 ### `data/curated/*.csv`
-- **Does:** version-controlled static knowledge tables with a `citation` column per row:
-  `crop_traits.csv`, `rotation_rules.csv`, `stress_sensitivity.csv`, `scenario_magnitudes.csv`.
-- **Rule:** rows without a resolvable citation fail `scripts/validate_dataset.py`.
+- **Does:** store version-controlled agronomy sources, crop claims, and crop-calendar claims in
+  `agronomy_sources.csv`, `crop_traits.csv`, and `crop_calendars.csv`.
+- **Rule:** each claim links to a source using `source_id` and an exact `source_locator`; the
+  agronomy registry rejects unresolved sources and missing locators.
 
 ---
 
