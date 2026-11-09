@@ -29,6 +29,31 @@ CI rule: `assert all(p.source_id in SOURCE_REGISTRY for p in emitted_provenance)
 `assert registry["verification"]["status"] == "verified"` for any source reachable from a
 shipped demo path. Unverified sources may exist in the registry only behind a feature flag.
 
+## 1.1 Curated agronomy evidence registry (`backend/data/agronomy_registry.py`)
+
+The agronomy evidence registry is separate from `backend/data/registry.py`, which describes
+retrievable environmental-data providers such as NASA POWER. The agronomy registry loads
+version-controlled CSV records from `backend/data/curated/` and does not fetch sources or store
+provider observations.
+
+Each curated claim includes a source ID, exact page/table/section locator, geographic scope,
+production-system scope (`IRRIGATED`, `RAINFED`, or `UNKNOWN`), evidence kind, evidence status,
+time applicability, and any stated reference period. `VERIFIED` means that the claim and locator
+were checked against the cited source. It does **not** establish current applicability, farm-level
+validity, or a recommendation.
+
+The registry's `evidence_kind` values (`PUBLISHED_STATISTIC` and
+`PUBLISHED_DESCRIPTIVE_CLAIM`) describe the form of a cited claim; they are not additions to the
+four application data classes in `backend/schemas/common.py`. Historical district/block aggregates
+are published statistics, not direct observations from an individual farm. Keep their geographic
+and temporal scope attached, and do not infer farm soil, irrigation access, or crop history from
+them. Unknown calendar dates remain blank and carry `window_status="UNKNOWN"`.
+
+The initial Madurai records cite the TNAU Madurai District Agriculture Plan (2017–18), the Madurai
+District Agriculture Department page, and the TNAU KVK Madurai Major Crops page. The KVK page is
+undated; its time applicability is therefore `UNKNOWN`. Soil survey categories and irrigation
+statistics are not crop traits and must not be encoded as crop traits or used as farm-level values.
+
 ## 2. Candidate sources (to verify in Phase 2)
 
 ### A. Meteorology → daily temperature / precipitation (drives growing season, heat-sum, dry spells)
@@ -96,11 +121,23 @@ Note for judges: coverage is national/regional dependent. Outside mapped areas t
 | `USDM` | USDA/NASA-linked drought monitor | periodic drought class | contextual banner on environmental panel | ☐ |
 
 ### E. Crop knowledge & assumptions (curated, cited — never invented)
-Every row of `crop_traits.csv`, `rotation_rules.csv`, `stress_sensitivity.csv` needs a real citation
-from an authoritative agronomy source chosen and recorded during Phase 4 (e.g. extension-service
-crop guides, official variety/production handbooks such as *Crop Production Guide*-style references,
-peer-reviewed rotation studies). Fields: `crop_id, trait, value/range, units, citation, retrieved_on,
-assumption_rationale, sensitivity_range`. Rows lacking citations fail `scripts/validate_dataset.py`.
+The implemented Madurai evidence registry currently loads `agronomy_sources.csv`, `crop_traits.csv`,
+and `crop_calendars.csv` from `backend/data/curated/`. Source rows record
+`source_id, provider, title, publication_year, version, url, accessed_date, geographic_scope,
+source_kind, verification_status, time_applicability, notes`. Claim rows in `crop_traits.csv`
+record `record_id, crop_id, crop_name, claim, value, unit, source_id, source_locator,
+geographic_scope, production_system_scope, evidence_kind, evidence_status, time_applicability,
+reference_period, notes`. Calendar rows use those claim fields plus `season, activity, window_start,
+window_end, window_status, timing_note`.
+
+Each claim's `source_id` links it to one source record; `source_locator` identifies the exact cited
+page, table, or section. `evidence_kind` describes whether the claim is a published statistic or a
+published descriptive claim. A source's `verification_status` applies to that source record, while
+`evidence_status` records verification of the individual claim and locator against the source. A
+`VERIFIED` claim must reference a source marked `VERIFIED`; neither status establishes current
+applicability or farm-level validity. These evidence fields do not change the application
+`DataClass` enum. Unknown calendar dates remain blank and explicitly marked `UNKNOWN`. No
+rotation-rules dataset is currently implemented.
 
 ### F. Farm geometry inputs (user-supplied, not NASA)
 User-drawn polygon, uploaded GeoJSON/shapefile, or a single lat/lon + area. Class = USER INPUT;
