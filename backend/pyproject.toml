@@ -14,12 +14,12 @@ dependencies = [
     "pydantic-settings>=2.3",
     "numpy>=1.26",
     "pandas>=2.2",
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
-    "httpx>=0.27",          # TestClient transport for FastAPI tests
     "ruff>=0.5",
     "import-linter>=2.0",   # enforces engine purity contract (see .importlinter)
 ]

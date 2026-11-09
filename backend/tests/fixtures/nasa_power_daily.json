@@ -1,0 +1,44 @@
+{
+  "_test_fixture": {
+    "synthetic": true,
+    "notice": "Values below are fabricated test inputs, not NASA observations."
+  },
+  "header": {
+    "title": "NASA/POWER Source Native Resolution Daily Data",
+    "sources": ["MERRA2"],
+    "fill_value": -999.0,
+    "time_standard": "UTC",
+    "start": "20200101",
+    "end": "20200103",
+    "lat": 12.34,
+    "lon": -56.78
+  },
+  "parameters": {
+    "PRECTOTCORR": {
+      "units": "mm/day",
+      "longname": "Precipitation Corrected",
+      "data": {
+        "20200101": 1.25,
+        "20200102": -999.0,
+        "20200103": 0.0
+      }
+    },
+    "T2M_MAX": {
+      "units": "C",
+      "longname": "Temperature at 2 Meters Maximum",
+      "data": {
+        "20200101": 24.5,
+        "20200102": 25.0,
+        "20200103": 25.5
+      }
+    },
+    "T2M_MIN": {
+      "units": "C",
+      "longname": "Temperature at 2 Meters Minimum",
+      "data": {
+        "20200101": 15.0,
+        "20200102": 15.5
+      }
+    }
+  }
+}
