@@ -39,6 +39,9 @@ This is how we *prove* determinism to judges and how scenario runs stay comparab
 | 422 | `OUT_OF_DOMAIN` | inputs outside validated domain (e.g. unsupported climate zone) |
 | 424 | `INSUFFICIENT_DATA` | required provider data unavailable → nothing is guessed |
 | 503 | `PROVIDER_UNAVAILABLE` | upstream NASA/NOAA outage (client should use cache/offline mode) |
+| 503 | `SOURCE_DISABLED` | experimental NASA POWER endpoint is disabled by default |
+| 502 | `UPSTREAM_INVALID_RESPONSE` | NASA POWER returned malformed or inconsistent data |
+| 500 | `CACHE_ERROR` | provider response cache could not be read |
 | 503 | `EXPLAIN_UNAVAILABLE` | LLM sidecar down; **not** an error for any other endpoint |
 
 ### 0.3 Cross-cutting types
@@ -69,7 +72,46 @@ Rules: (a) a null value never appears without `status`; (b) every number carries
 
 ---
 
-### 1.1 Farm Profile
+### 1.1 Experimental NASA POWER Daily Data
+
+#### `GET /environmental/daily`
+
+The endpoint is disabled by default (`FS_NASA_POWER_ENABLED=false`) because the NASA POWER
+source record remains unverified. When explicitly enabled it is experimental and returns
+provider-gridded context, not farm-station observations.
+
+Query parameters:
+
+| Parameter | Type | Rule |
+|---|---|---|
+| `latitude` | number | caller supplied, inclusive range −90..90 |
+| `longitude` | number | caller supplied, inclusive range −180..180 |
+| `start_date` | ISO date | inclusive |
+| `end_date` | ISO date | inclusive and not earlier than `start_date` |
+
+No example coordinates are defaults. The provider requests `PRECTOTCORR`, `T2M_MAX`, and
+`T2M_MIN` in UTC. It returns one row per requested day and parameter; missing values use
+`value: null` and `status: "missing"`.
+
+Success response uses the standard envelope. `data` contains `experimental`,
+`source_verification_status`, and `observations`. The provenance entry preserves the complete
+provider result, including `source_type="PROVIDER_GRIDDED"`, requested/reported coordinates,
+requested/returned date coverage, UTC time standard, provider source names, parameter units and
+descriptions, retrieval timestamp, endpoint, and limitations.
+
+When `FS_OFFLINE_MODE=true`, the provider may return an unexpired matching cache entry. A cache
+miss does not trigger a network request and returns `503 PROVIDER_UNAVAILABLE`. When the source
+gate is disabled, the endpoint returns `503 SOURCE_DISABLED` before constructing or accessing the
+provider. Invalid query values use the existing `400 VALIDATION_ERROR` convention. Upstream
+unavailability maps to `503 PROVIDER_UNAVAILABLE`, invalid upstream payloads to
+`502 UPSTREAM_INVALID_RESPONSE`, and cache read failures to `500 CACHE_ERROR`. A cache write
+failure after valid data is parsed is logged by the provider and does not invalidate the response.
+
+This endpoint does not calculate indicators, scores, recommendations, or forecasts.
+
+---
+
+### 1.2 Farm Profile
 
 #### `POST /farm-profile`
 Request:
@@ -100,7 +142,7 @@ echoed profile, geometry_validity }`
 
 ---
 
-### 1.2 Environmental Profile (NASA-derived)
+### 1.3 Environmental Profile (NASA-derived)
 
 #### `GET /environmental-profile?farm_id=&start_year=&end_year=`
 Response `data`:
@@ -140,7 +182,7 @@ rooting_limiting_depth_cm, map_unit_symbol, sourced_from }` — each a `Metric`;
 
 ---
 
-### 1.3 Knowledge
+### 1.4 Knowledge
 
 - `GET /knowledge/crops` → trait table rows incl. `citation` per row.
 - `GET /knowledge/crops/{crop_id}` → single crop + soil-fit factors for a given `farm_id`.
@@ -150,7 +192,7 @@ rooting_limiting_depth_cm, map_unit_symbol, sourced_from }` — each a `Metric`;
 
 ---
 
-### 1.4 Rotations
+### 1.5 Rotations
 
 #### `POST /rotations/generate`
 `{ farm_id, horizon_years?, max_candidates?=40 }` →
@@ -179,7 +221,7 @@ factor is DERIVED or ASSUMPTION.
 
 ---
 
-### 1.5 Scenarios (stress testing)
+### 1.6 Scenarios (stress testing)
 
 #### `POST /scenarios/stress`
 ```json
@@ -207,7 +249,7 @@ Constraint: `custom_overrides` magnitudes are clamped to the curated allowed ran
 
 ---
 
-### 1.6 Comparison & Explanation
+### 1.7 Comparison & Explanation
 
 #### `GET /comparison?farm_id=&scenario_ids=&k=5`
 Bundled view for the results screen: baseline + stressed rankings side-by-side, robustness metrics,

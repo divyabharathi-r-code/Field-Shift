@@ -72,6 +72,20 @@ ExplanationPayload { ranked rotations, fired_rules[], limiting_factors[], scenar
 **Direction is one-way.** No stage reads from a later stage. The LLM branch (⑩) is a leaf: nothing
 downstream of it feeds back into the numbers.
 
+### 1.1 Experimental NASA POWER endpoint
+
+`GET /api/v1/environmental/daily` is an additive read-only path. The caller supplies coordinates
+and an inclusive date range; FastAPI validates the query before a `DataQuery` is passed to the
+NASA POWER provider. `FS_NASA_POWER_ENABLED` defaults to `false`; while disabled, the endpoint
+returns `503 SOURCE_DISABLED` without constructing the provider. When enabled, the configured
+offline flag is passed to the provider: a cache hit can serve the request, while a cache miss in
+offline mode raises `503 PROVIDER_UNAVAILABLE` and does not make a network request.
+
+The response contains normalized daily observations and full provider provenance, including
+`source_type="PROVIDER_GRIDDED"`. Missing provider values remain `null` with a missing status.
+This route does not derive environmental indicators and does not imply farm-station measurements.
+NASA POWER remains marked unverified; enabling the experimental gate does not change that status.
+
 ## 2. State transitions and data classes at each hop
 
 | Hop | Artifact produced | Dominant data class | What may NOT happen here |

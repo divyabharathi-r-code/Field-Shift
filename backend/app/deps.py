@@ -10,9 +10,13 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 
+from fastapi import Depends
+
 from app.config import Settings, get_settings
 from app.errors import FieldShiftError
 from data.agronomy_registry import AgronomyRegistry, load_agronomy_registry
+from data.providers.base import Provider
+from data.providers.nasa_power import NasaPowerProvider
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,3 +39,13 @@ def agronomy_registry_dep() -> AgronomyRegistry:
             status_code=500,
             details={"reason": str(exc)},
         ) from exc
+
+
+_SETTINGS_DEP = Depends(settings_dep)  # noqa: B008
+
+
+def nasa_power_provider_dep(settings: Settings = _SETTINGS_DEP) -> Provider | None:
+    """Construct the provider only when its explicit experimental gate is enabled."""
+    if not settings.nasa_power_enabled:
+        return None
+    return NasaPowerProvider()

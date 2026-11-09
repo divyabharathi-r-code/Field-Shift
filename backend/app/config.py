@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     # Offline mode is a *statement of intent* for the demo: with no providers
     # wired yet (Phase 1), the backend is offline by definition.
     offline_mode: bool = True
+    nasa_power_enabled: bool = False
     cors_origins: list[str] = ["http://localhost:5173"]
 
 
