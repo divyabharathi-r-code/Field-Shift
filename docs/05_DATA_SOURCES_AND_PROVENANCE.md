@@ -3,8 +3,8 @@
 > **Status: NASA POWER has partial API verification; its source record remains unverified.**
 > A successful sample JSON response was observed during read-only research, but parameter-specific
 > spatial resolution, historical coverage, licence terms, and request limits were not established.
-> The provider implementation is not wired to a shipped demo path. Do not treat the synthetic test
-> fixture as source evidence or treat NASA POWER values as field measurements.
+> The experimental API route is disabled by default. Do not treat the synthetic test fixture as
+> source evidence or NASA POWER values as field measurements.
 
 ## 1. Registry record (`backend/data/registry.py`)
 
@@ -88,9 +88,9 @@ semantics.
   `source_type="PROVIDER_GRIDDED"`; NASA POWER grid-cell data are not direct farm-station
   measurements.
 
-  The provider's `PROVIDER_GRIDDED` source type is present in the data-layer result and registry.
-  Propagation into API-schema provenance is deferred until API integration; existing API schemas
-  remain unchanged in Phase 2B.
+  The provider's `PROVIDER_GRIDDED` source type is present in the data-layer result, registry, and
+  experimental `/api/v1/environmental/daily` response provenance. `FS_NASA_POWER_ENABLED` defaults
+  to false; enabling the route does not change the source's `unverified` status.
 - **Missing data:** the API fill value `-999.0` and absent daily values are preserved as missing
   (`null`) by the provider. No interpolation or imputation is performed.
 - **Fixture:** `backend/tests/fixtures/nasa_power_daily.json` is explicitly synthetic test input;

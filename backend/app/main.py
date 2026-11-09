@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.errors import install_handlers
-from app.routers import health, knowledge
+from app.routers import environmental, health, knowledge
 
 
 def create_app() -> FastAPI:
@@ -42,6 +42,7 @@ def create_app() -> FastAPI:
     api = "/api/v1"
     app.include_router(health.router, prefix=api)
     app.include_router(knowledge.router, prefix=api)
+    app.include_router(environmental.router, prefix=api)
     # Phase 3+: farm   Phase 4+: knowledge   Phase 5+: rotations
     # Phase 6+: scenarios   Phase 10+: explain (only LLM route)
 
