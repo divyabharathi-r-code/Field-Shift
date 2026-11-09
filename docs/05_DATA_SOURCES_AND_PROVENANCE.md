@@ -1,38 +1,29 @@
 # FieldShift — Data Sources & Provenance (Phase 0)
 
-> **Status of this document: CANDIDATE LIST, NOT YET VERIFIED.**
-> Nothing below has been fetched or confirmed against a live API in this repository yet.
-> Before Phase 2 code is written, every entry must be verified by a human running the actual
-> endpoint/download and recording: exact product/short name, access URL, parameter names, units,
-> spatial/temporal resolution, licence, and a sample response saved under `data_downloads/`.
-> Any entry that cannot be verified is **removed**, not guessed. This satisfies rules 5–7 of
-> `00_PROJECT_RULES.md` ("never invent NASA datasets or API values").
+> **Status: NASA POWER has partial API verification; its source record remains unverified.**
+> A successful sample JSON response was observed during read-only research, but parameter-specific
+> spatial resolution, historical coverage, licence terms, and request limits were not established.
+> The provider implementation is not wired to a shipped demo path. Do not treat the synthetic test
+> fixture as source evidence or treat NASA POWER values as field measurements.
 
-## 1. Registry schema (`backend/data/registry.py`)
+## 1. Registry record (`backend/data/registry.py`)
 
 ```python
-SourceRecord = {
-  "source_id":        str,    # stable key used in Provenance.source_id
-  "title":            str,
-  "provider":         str,    # e.g. NASA, NOAA, USDA
-  "product_or_dataset": str,  # EXACT short name as published — to be verified
-  "purpose_in_app":   str,    # which indicator(s) it feeds; one row per use
-  "spatial_resolution": str,
-  "temporal_resolution": str,
-  "units_as_published": str,
-  "units_in_app":     str,
-  "access_method":    "API | download | static file",
-  "access_url":       str,    # verified URL
-  "auth_required":    bool,   # e.g. Earthdata Login / EDL token
-  "licence":          str,
-  "citation":         str,
-  "validated_domain": {"lat":[..], "lon":[..], "years":[..], "notes": str},
-  "retrieval_policy": {"cache_ttl_days": int, "pin_retrieved_at": date|null},
-  "verification":     {"status": "unverified|verified|failed",
-                        "verified_by": str, "verified_on": date,
-                        "sample_file": "data_downloads/..."}
-}
+SourceRecord(
+  source_id, title, provider, product_or_dataset, source_type, purpose_in_app,
+  access_url, access_method, authentication_required,
+  temporal_resolution, parameters, units_by_parameter,
+  spatial_resolution, historical_coverage, validated_domain, licence,
+  citation, cache_ttl_days, verification_status, verification_notes
+)
 ```
+
+`source_type` distinguishes where the source data come from (for example, provider-supplied grid
+data) and is separate from the application's four data classes. For NASA POWER, provenance uses
+`source_type="PROVIDER_GRIDDED"`; this is not a farm weather-station observation and does not
+establish field-scale conditions. Unknown or unverified facts are `None`; they are not inferred from
+generic product descriptions. The cache TTL is the default policy, and a provider instance may
+override it.
 
 CI rule: `assert all(p.source_id in SOURCE_REGISTRY for p in emitted_provenance)` and
 `assert registry["verification"]["status"] == "verified"` for any source reachable from a
@@ -43,12 +34,42 @@ shipped demo path. Unverified sources may exist in the registry only behind a fe
 ### A. Meteorology → daily temperature / precipitation (drives growing season, heat-sum, dry spells)
 | source_id | Provider | Candidate product | Purpose | Verify |
 |---|---|---|---|---|
-| `NASA_POWER` | NASA POWER | daily point-metology product (temperature, precipitation) via its public API | OBSERVED daily met at farm center | ☐ |
+| `NASA_POWER` | NASA POWER | POWER Daily Point API | Provider-supplied daily gridded meteorology for regional context | Partial; see §2.1 |
 | `DAYMET` | NASA ORNL DAAC | Daymet daily surface met (1 km) | alternative/cross-check gridded met | ☐ |
 | `CLIMATE_NORMALS` | NOAA NCEI | 30-year climate normals | DERIVED anomaly baseline (explicit normal period) | ☐ |
 
-Open questions to resolve during verification: exact parameter IDs and unit strings; whether an API
-key/token is required; rate limits; missing-day semantics; timezone/date conventions; licensing text.
+Open questions to resolve during verification: effective spatial resolution, complete historical
+coverage, licence and attribution text, authentication policy, rate limits, and full missing-day
+semantics.
+
+### 2.1 NASA POWER Daily Point API — partial verification
+
+- **Official documentation:** [Daily API documentation](https://power.larc.nasa.gov/docs/services/api/temporal/daily/).
+- **Endpoint:** `https://power.larc.nasa.gov/api/temporal/daily/point`
+- **Request configuration used for research:** community `AG`; format `JSON`; time standard `UTC`;
+  parameters `PRECTOTCORR`, `T2M_MAX`, and `T2M_MIN`.
+- **Response metadata observed:** all requested parameters were present; `PRECTOTCORR` reported
+  `mm/day`; `T2M_MAX` and `T2M_MIN` reported `C`; the fill value was `-999.0`; and the time
+  standard was `UTC`. The response included source metadata. A sample request returned JSON, but an
+  HTTP status code was not captured.
+- **Authentication:** the observed request was made without credentials. Authentication policy has
+  not been independently documented here.
+- **Not verified:** effective spatial resolution for each parameter, full historical coverage,
+  licensing/attribution terms, request limits, and rate-limit policy. Do not substitute generic
+  endpoint wording such as “native resolution” for a parameter-specific resolution.
+- **Geographic caveat:** the prior illustrative Madurai city-centre request is not a farm location.
+  Production coordinates must be supplied from a farm profile; district or city-centre data must
+  not be represented as field observations. Provider output uses
+  `source_type="PROVIDER_GRIDDED"`; NASA POWER grid-cell data are not direct farm-station
+  measurements.
+
+  The provider's `PROVIDER_GRIDDED` source type is present in the data-layer result and registry.
+  Propagation into API-schema provenance is deferred until API integration; existing API schemas
+  remain unchanged in Phase 2B.
+- **Missing data:** the API fill value `-999.0` and absent daily values are preserved as missing
+  (`null`) by the provider. No interpolation or imputation is performed.
+- **Fixture:** `backend/tests/fixtures/nasa_power_daily.json` is explicitly synthetic test input;
+  it is not a captured NASA response and does not satisfy the source-sample verification gate.
 
 ### B. Vegetation dynamics → NDVI/EVI time series (greenness, anomaly, phenology sanity check)
 | source_id | Provider | Candidate product | Purpose | Verify |
@@ -116,7 +137,7 @@ Each scenario card in the UI states: what is changed, what is held fixed, why th
 ## 5. Verification checklist (gate to exit Phase 2)
 
 - [ ] Each shipped `source_id` has `verification.status = verified`, a URL that resolves today, and a
-      sample file committed under `data_downloads/` (or gitignored with hash recorded).
+      real sample file committed under `data_downloads/` (or gitignored with hash recorded).
 - [ ] Units confirmed from documentation, conversion formula written into `Provenance.formula`.
 - [ ] Resolution + valid domain recorded; UI displays them next to every derived figure.
 - [ ] Licence/attribution text captured for the submission package.
