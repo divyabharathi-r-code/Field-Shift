@@ -194,6 +194,22 @@ rooting_limiting_depth_cm, map_unit_symbol, sourced_from }` — each a `Metric`;
 
 ### 1.5 Rotations
 
+Phase 2E implements only the typed contract and pure structural validation for a rotation plan
+explicitly supplied by a caller. It adds no endpoint. A plan is an ordered, nonempty sequence of
+entries; each entry supplies exactly one nonblank `crop_id` or `crop_name` and a unique, contiguous,
+one-based `sequence_position` matching its order in the list. Repeated crop identifiers or names are
+allowed. Unknown fields (including unsupported agronomic context) are rejected rather than inferred.
+
+Pydantic schema parsing checks input shape, strict types, required/nonblank identity fields, and
+unknown fields; it does not by itself establish structural validity. The pure engine validator
+checks sequence-position continuity, duplicates, and order, returning machine-readable issues and a
+`suitability_assessment` of
+`NOT_ASSESSED`. A valid result means only that the supplied sequence is structurally represented; it
+does not mean the sequence is agronomically suitable. Crop generation, compatibility, dates,
+durations, scoring, ranking, and simulation remain unimplemented.
+
+The endpoint contracts below are planned only; they are not currently exposed by the API:
+
 #### `POST /rotations/generate`
 `{ farm_id, horizon_years?, max_candidates?=40 }` →
 `data: { rotations: [{rotation_id, years:["corn","soybean","oats","alfalfa"], canonical_form, feasible:true}],
