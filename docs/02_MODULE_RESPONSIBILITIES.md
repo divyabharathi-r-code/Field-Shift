@@ -140,21 +140,38 @@ Metric           # value, provenance, warning[]        <- every number is wrappe
 - **Does NOT:** silently use undocumented rules — every fired rule traces to a `rotation_rules.csv` row.
 
 ### `engine/rotation/constraints.py`
-- **Does:** hard feasibility filters (no same-family consecutive years unless allowed, fallow limits,
-  horizon length, mandatory-crop inclusion, exclusion list).
-- **Output:** `feasible: bool, violated_rule_ids: []`.
+- **Status:** planned; no agronomic feasibility constraints are implemented.
+- **Planned:** hard feasibility filters (no same-family consecutive years unless allowed, fallow
+  limits, horizon length, mandatory-crop inclusion, exclusion list).
+- **Planned output:** `feasible: bool, violated_rule_ids: []`.
 
 ### `engine/rotation/generator.py`
-- **Does:** enumerate candidate rotations over horizon H (default 4 years) from the allowed crop set,
-  apply constraints, deduplicate by canonical form (e.g. cyclic equivalence), cap the count deterministically.
-- **Does NOT:** optimise/search stochastically. Output order is stable across runs.
+- **Status:** planned; candidate rotations are not generated.
+- **Planned:** enumerate candidate rotations over horizon H from an allowed crop set, apply constraints,
+  deduplicate by canonical form, and cap the count deterministically.
+- **Planned non-goal:** stochastic optimization/search; output order should be stable across runs.
+
+### `engine/rotation/models.py` and `plan_validation.py`
+- **Does:** represent an explicitly caller-supplied ordered crop sequence and deterministically check
+  nonempty entries, one unambiguous user-supplied crop identifier or name per entry, and contiguous
+  one-based sequence positions in the submitted order.
+- Schema parsing validates input shape and identity fields; sequence-position semantics are enforced
+  by `plan_validation.py`, not by Pydantic parsing alone.
+- **Does NOT:** generate crops, reorder entries, infer agronomic context, or assess suitability.
+- **Result meaning:** only that the supplied plan has a structurally valid representation; suitability
+  is explicitly `NOT_ASSESSED`.
+- **Test:** `tests/unit/test_rotation_plan.py` covers schema errors, ordering, repeats, determinism,
+  and immutability.
 
 ### `engine/rotation/scorer.py`
-- **Does:** produce per-rotation dimension scores 0–100 for the fixed MVP dimensions:
+- **Status:** planned; no scores or rankings are calculated.
+- **Planned:** produce per-rotation dimension scores for the fixed MVP dimensions:
   `soil_health`, `water_resilience`, `climate_exposure`, `pest_disease_disruption`,
-  `operational_risk`, `priority_fit`. Pure functions of (rotation, EnvironmentalProfile, SoilProfile, traits, weights).
-- **Does NOT:** aggregate dimensions into an overall ranking (`ranking/aggregate.py`), and does not know scenarios exist.
-- **Test:** golden-file scorecard; each dimension independently unit-tested; all inputs documented as DERIVED/ASSUMPTION.
+  `operational_risk`, and `priority_fit`, from documented environmental, soil, trait, and weight
+  inputs.
+- **Planned non-goals:** aggregate dimensions into an overall ranking or process scenarios.
+- **Planned tests:** golden scorecards and independently tested dimensions with DERIVED/ASSUMPTION
+  input provenance.
 
 ### `engine/scenario/perturbations.py`
 - **Does:** apply named, curated deltas to an `EnvironmentalProfile` (e.g. `warm_+2C`,
