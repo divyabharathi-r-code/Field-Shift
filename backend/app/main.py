@@ -4,8 +4,7 @@ Mounted here:
   - CORS for the local Vite dev server
   - the single error envelope handlers (app/errors.py)
   - routers under /api/v1
-Phase 1 registers `health` only; farm/knowledge/rotations/scenarios/explain
-routers are added in their own phases — never stubbed with fake behaviour.
+Only implemented routers are mounted; planned behavior is never stubbed.
 """
 
 from __future__ import annotations
@@ -15,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.errors import install_handlers
-from app.routers import environmental, health, knowledge
+from app.routers import environmental, health, knowledge, rotations
 
 
 def create_app() -> FastAPI:
@@ -43,8 +42,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix=api)
     app.include_router(knowledge.router, prefix=api)
     app.include_router(environmental.router, prefix=api)
-    # Phase 3+: farm   Phase 4+: knowledge   Phase 5+: rotations
-    # Phase 6+: scenarios   Phase 10+: explain (only LLM route)
+    app.include_router(rotations.router, prefix=api)
 
     return app
 
