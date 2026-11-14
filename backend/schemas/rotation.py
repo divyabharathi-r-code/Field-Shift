@@ -14,6 +14,8 @@ from pydantic import (
     model_validator,
 )
 
+from schemas.common import Confidence, FieldWarning, Provenance, SuccessEnvelope
+
 NonBlankString = Annotated[StrictStr, Field(min_length=1)]
 
 
@@ -71,3 +73,12 @@ class RotationPlanValidationResult(BaseModel):
     structurally_valid: bool
     issues: tuple[RotationPlanValidationIssue, ...]
     suitability_assessment: Literal["NOT_ASSESSED"] = "NOT_ASSESSED"
+
+
+class RotationPlanValidationResponse(SuccessEnvelope):
+    """Standard API envelope for structural rotation-plan validation."""
+
+    data: RotationPlanValidationResult
+    provenance: list[Provenance] = Field(default_factory=list)
+    warnings: list[FieldWarning] = Field(default_factory=list)
+    confidence: Confidence = Field(default_factory=Confidence)
